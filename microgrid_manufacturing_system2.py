@@ -312,7 +312,7 @@ class Microgrid(object):
                  windspeed=0,
                  #the environment feature: wind speed at current decision epoch#
                  actual_capacity=capacity_battery_storage, # Muhammad
-                 battery_rated_capacity=90, # 90kWh, 0.09Mwh Muhammad
+                 battery_rated_capacity=1, # 90kWh, 0.09Mwh Muhammad
                  t=0, # Muhammad
                  f=0,#Mihitha
                  C_Dt=[0]*10000,#Mihitha
@@ -388,7 +388,7 @@ class Microgrid(object):
          self.Dt=abs(self.EAT[t]) / self.AC[t]
          #if t!=0:
           #self.Dt=abs(self.EAT[t]) / self.AC[t-1] 
-         # print("self.EAT: ", self.EAT)
+        # print("self.EAT: ", self.EAT)
 
 
 
@@ -398,7 +398,7 @@ class Microgrid(object):
             self.C_Dt[t] = alpha_0 * (self.Dt ** -alpha_1) * math.exp(-alpha_2 * self.Dt)
         else:
             self.C_Dt[t] = 0
-        # print("C_Dt: ", self.C_Dt )
+        print("C_Dt: ", self.C_Dt[t])
 
         # Battery actual capacity Eat
         # self.Ebr= self.actual_capacity # why were we taking Ebr=actual capacity, while it is divide by rated capacity as well
@@ -411,7 +411,7 @@ class Microgrid(object):
             self.AC[t+1]=self.AC[t] - (self.Ebr/(2 * self.C_Dt[t])) 
         else:
             self.AC[t+1]= self.AC[t]
-        # print("self.actual_capacity: ", self.AC)
+        print("self.actual_capacity: ", self.AC[t])
         return self.actual_capacity
 
     def get_SOC_min(self, t):  # Muhammad
@@ -426,7 +426,7 @@ class Microgrid(object):
         return SOC_max
 
     def get_battery_degradation_cost(self, t):  # Muhammad
-        C_cap= 2400 # capital cost of the battery i.e., initial installation cost
+        C_cap= 33.4 # capital cost of the battery i.e., initial installation cost
         # C_Dt= self.get_battery_life_cycle_Ct(t)
         if self.f==0 and self.C_Dt[t]!=0 and self.C_Dt[t-1]!=0:
             C_B= (C_cap*self.Ebr)/(2*self.C_Dt[t])-(C_cap*self.Ebr)/(2*self.C_Dt[t-1])
@@ -522,8 +522,8 @@ class Microgrid(object):
             energy_generated_generator=number_generators*rated_output_power_generator*Delta_t
         else:
             energy_generated_generator=0
-
         # calculate the energy generated bv the generator, e_t^g#
+        self.actual_capacity= self.get_actual_capacity_Eat(t)
         Battery_degradation_cost= self.get_battery_degradation_cost(t)  # Muhammad
         print("Battery degradation cost in main ftn is: ", Battery_degradation_cost)
         operational_cost=energy_generated_solar*unit_operational_cost_solar+energy_generated_wind*unit_operational_cost_wind+energy_generated_generator*unit_operational_cost_generator
