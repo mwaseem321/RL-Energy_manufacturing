@@ -117,6 +117,7 @@ Define 3 major classes in the system: Machine, Buffer, Microgrid
 """
 the Machine class defines the variables and functions of one machine
 """
+
 class Machine(object):
     def __init__(self,
                  name=1,
@@ -369,6 +370,7 @@ class Microgrid(object):
 
         # Updating switching cycles counter k according to that value for f
         if t != 0:
+            print("self.EbT", self.EbT)
             k_status = self.EbT[t] * self.EbT[t - 1]
             if k_status == -1:
                 self.f = 1
@@ -429,6 +431,9 @@ class Microgrid(object):
         C_cap= 2400 # capital cost of the battery i.e., initial installation cost
         # C_Dt= self.get_battery_life_cycle_Ct(t)
         if self.f==0 and self.C_Dt[t]!=0 and self.C_Dt[t-1]!=0:
+            print("self.C_Dt[t]: ", self.C_Dt[t])
+            print("self.C_Dt[t-1]: ", self.C_Dt[t-1])
+            print("self.Ebr: ", self.Ebr)
             C_B= (C_cap*self.Ebr)/(2*self.C_Dt[t])-(C_cap*self.Ebr)/(2*self.C_Dt[t-1])
         elif self.f==1 and self.C_Dt[t]!=0:
             C_B = (C_cap * self.Ebr) / (2 * self.C_Dt[t])
@@ -689,6 +694,7 @@ class ManufacturingSystem(object):
 
     def average_total_cost(self, current_rate_consumption_charge, t):
         #calculate the average total cost of the manufacturing system, E(S,A), based on the current machine, buffer, microgrid states and actions#
+        # print("current_rate_consumption_charge: ", current_rate_consumption_charge)
         E_mfg=0
         #total energy consumed by the manufacturing system, summing over all machines#
         for i in range(number_machines):
