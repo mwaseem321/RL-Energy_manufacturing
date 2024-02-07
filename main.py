@@ -1,4 +1,6 @@
 import numpy as np
+from matplotlib import pyplot as plt
+
 from maddpg import MADDPG
 from buffer import MultiAgentReplayBuffer
 from microgrid_manufacturing_system2 import Microgrid, ManufacturingSystem, ActionSimulation, MicrogridActionSet_Discrete_Remainder, MachineActionTree, SystemInitialize
@@ -8,7 +10,7 @@ from env import Env
 #set the number of machines
 number_machines=5
 #set the unit reward of production
-unit_reward_production=1000/10000
+unit_reward_production=4000/10000
 #the unit reward for each unit of production (10^4$/unit produced), i.e. the r^p, this applies to the end of the machine sequence#
 
 #the discount factor gamma when calculating the total cost#
@@ -80,7 +82,7 @@ if __name__ == '__main__':
 
     PRINT_INTERVAL = 20
     n_episodes = 50
-    episode_length = 100
+    episode_length = 200
     total_steps = 500
     score_history = []
     evaluate = False
@@ -99,7 +101,6 @@ if __name__ == '__main__':
             actions = maddpg_agents.choose_action(obs)
             # print("actions here: ",actions )
             obs_, reward, _, info = env.step(actions, episode_step)
-
             state = obs_list_to_state_vector(obs)
             # print("state: ", state)
             # print("obs_: ", obs_)

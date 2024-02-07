@@ -23,7 +23,7 @@ class MADDPG:
         for agent_idx in range(self.n_agents_cont):
             self.continuous_agents.append(ContinuousAgent(cont_actor_dims[agent_idx], critic_dims,
                             n_actions_cont, n_agents_disc+n_agents_cont, agent_idx, alpha=alpha, beta=beta,
-                            chkpt_dir=chkpt_dir, min_action= -1, max_action= 1))
+                            chkpt_dir=chkpt_dir, min_action= 0, max_action= 1))
     def save_checkpoint(self):
         print('... saving checkpoint ...')
         for agent in self.discrete_agents:

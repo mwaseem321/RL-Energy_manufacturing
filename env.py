@@ -1,3 +1,5 @@
+import random
+
 from microgrid_manufacturing_system2 import Microgrid, ManufacturingSystem, ActionSimulation, MicrogridActionSet_Discrete_Remainder, MachineActionTree, SystemInitialize
 from projectionSimplex import projection
 import numpy as np
@@ -38,9 +40,9 @@ class Env(object):
         # return [["off", buffer levels], ["off", 0, 0], ["off", 0, 0], ["off", 0, 0], ["off", 0], [0, 0], [0, 0], [0, 0]]
         reset_list= [[0, 0,0,0, 0],[0,0,0,0,0 ],[0,0,0,0,0], [0,0,0,0,0], [0,0,0,0,0], [0,0,0,0], [0,0,0,0], [0,0,0,0]]
         self.machine_states= [sublist[0] for sublist in reset_list[:5]]
-        print("self.machine_states: ", self.machine_states)
+        # print("self.machine_states: ", self.machine_states)
         self.buffer_states= reset_list[0][1:]
-        print("self.buffer_states: ", self.buffer_states)
+        # print("self.buffer_states: ", self.buffer_states)
         self.SOC= reset_list[6][0]
         return reset_list
 
@@ -57,7 +59,8 @@ class Env(object):
         # print("flat_actions: ", flat_actions)
         # theta= flat_actions[-9:-7] + flat_actions[-6:-4]+ flat_actions[-3:-1]
         # print("theta: ", theta)
-        print("actions in the step: ", flat_actions, "timestep: ", t)
+        # print("actions in the step: ", flat_actions)
+        print("timestep: ", t)
         obs_= self.get_obs(flat_actions, t)
         self.machine_states = [sublist[0] for sublist in obs_[:5]]
         self.buffer_states = obs_[0][1:]
@@ -68,8 +71,43 @@ class Env(object):
         return obs_, reward, done, info
 
     def get_obs(self, flat_actions, t):
-        theta = flat_actions[-9:-7] + flat_actions[-6:-4] + flat_actions[-3:-1]
+        # theta = flat_actions[-9:-7] + flat_actions[-6:-4] + flat_actions[-3:-1]
         # ManufacturingSystem()
+
+        # Random theta
+        # Define the number of lists
+        num_lists = 3
+        # Initialize the list of lists
+        list_of_lists = []
+
+        # Generate three lists
+        for _ in range(num_lists):
+            # Generate two random numbers between 0 and 1
+            num1 = random.random()
+            num2 = random.random()
+
+            # Ensure the third number is positive and such that the sum of all three equals 1
+            # Randomize the third number based on the sum of the first two numbers
+            total_sum = num1 + num2
+            num3 = 1 - total_sum
+
+            # Ensure all numbers are positive
+            if num3 < 0:
+                # If num3 is negative, adjust num1 or num2 accordingly
+                adjustment = abs(num3)
+                if num1 >= num2:
+                    num1 -= adjustment
+                else:
+                    num2 -= adjustment
+
+            # Create the list
+            random_numbers = [num1, num2, max(0, num3)]  # Ensure num3 is positive
+
+            # Append the list to the list of lists
+            list_of_lists.append(random_numbers)
+
+        theta = list_of_lists
+
         machine_control_actions= []
         solar_actions= []
         solar_actions.extend(flat_actions[:-6])
@@ -96,16 +134,29 @@ class Env(object):
 
             # Append the action to the list of actions for the machine
             machine_control_actions.append(action)
-        print("machine_control_actions: ", machine_control_actions)
-        actions_adjustingstatus = [1, 1, 1]
+        # print("machine_control_actions: ", machine_control_actions)
+        actions_adjustingstatus = [random.randint(0, 1) for _ in range(3)] #[1, 1, 1]
+        # print("actions_adjustingstatus: ", actions_adjustingstatus)
         grid= Microgrid(self.workingstatus, self.SOC,actions_adjustingstatus, solar_actions,wind_actions,generator_actions,self.actions_purchased,
                         self.actions_discharged,
                                 solarirradiance= solarirradiance[t//8640],
                                 windspeed=windspeed[t//8640]
                                 )
+        # Plot the updated values
+        # plt.plot(grid.time_steps_plot, grid.EAT_plot, label='EAT')
+        # # plt.plot(grid.time_steps_plot, grid.Dt_plot, label='Dt')
+        # plt.xlabel('Time Step')
+        # plt.ylabel('Value')
+        # plt.title('Real-time Plot')
+        # plt.legend()
+        # plt.pause(0.05)  # Pause for a short duration to update the plot
+        # plt.clf()  # Clear the current figure
+        # plt.show()
         self.system= ManufacturingSystem(self.machine_states, machine_control_actions, self.buffer_states, grid)
+        # print("self.machine_states before transition: ", self.machine_states)
+        # print("Buffer states before transition: ", self.buffer_states )
         self.machine_states, self.buffer_states = self.system.transition_manufacturing()
-        print("machine_states: ", self.machine_states, "buffer_states: ", self.buffer_states)
+        # print("machine_states: ", self.machine_states, "buffer_states: ", self.buffer_states)
         # Define a dictionary to map machine states to observation values
         state_mapping = {'Off': 0, 'Opr': 1, 'Brk': 2, 'Sta': 3, 'Blo': 4}
 
@@ -126,6 +177,8 @@ class Env(object):
         action_sim= ActionSimulation(self.system)
         solar_power, wind_power, generator_power = action_sim.MicroGridActions_SolarWindGenerator(theta)
         self.actions_purchased, self.actions_discharged = action_sim.MicroGridActions_PurchasedDischarged(solar_actions, wind_actions, generator_actions)
+        print("self.actions_discharged: ", self.actions_discharged)
+        print("self.actions_purchased: ", self.actions_purchased)
         # print("solar power before conversion: ", solar_power, "type: ", type(solar_power))
         # Convert solar_power to a simple list of float values
         # solar_power_flat = [float(array[0]) for array in solar_power]
@@ -156,11 +209,12 @@ class Env(object):
         for i in range(number_machines * number_machines, len(observation), power_sources):
             obs_list.append(observation[i:i + number_machines - 1])
         # return machine_states, buffer_states, SOC, solar_power, wind_power, generator_power
-        print("obs_list: ", obs_list)
+        # print("obs_list: ", obs_list)
         return obs_list
     def get_reward(self, t):
         # print("rate_consumption_charge: ", rate_consumption_charge[self.t//8640], "self.t:", t)
         avg_cost= self.system.average_total_cost(rate_consumption_charge[t//8640], t)
+        print("Reward avg cost: ", avg_cost)
         return avg_cost
     def is_done(self, t):
         # if t>=T:
