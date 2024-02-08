@@ -93,14 +93,20 @@ if __name__ == '__main__':
 
     for i in range(n_episodes):
         obs = env.reset()
+        print(f"Environment is reset here as {obs}")
         score = 0
         done = [False]*n_agents
         episode_step = 0
         while not any(done):
             # print("while loop starts here")
+            print()
+            print()
+            print("Time step: ", episode_step)
             actions = maddpg_agents.choose_action(obs)
-            # print("actions here: ",actions )
+            print(f"Actions chosen from maddpg are {actions}" )
             obs_, reward, _, info = env.step(actions, episode_step)
+            print(f"new obs received at step {episode_step} from step functions is {obs_}")
+            print(f"reward received from step function at timestep {episode_step} is {reward}")
             state = obs_list_to_state_vector(obs)
             # print("state: ", state)
             # print("obs_: ", obs_)
