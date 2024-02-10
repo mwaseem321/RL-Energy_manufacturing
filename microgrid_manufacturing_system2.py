@@ -237,7 +237,7 @@ class Buffer(object):
                  #the label of this buffer#
                  state=0,
                  #the buffer state is an integer from buffer_min (=0) to buffer_max 
-                 buffer_max=0, 
+                 buffer_max=0,
                  #the maximal capacity of the buffer#
                  buffer_min=0,
                  #the minimal capacity of the buffer is zero#
@@ -262,15 +262,15 @@ class Buffer(object):
     def NextState(self):
         #calculate the state of the buffer at next decision epoch, return this state#
         nextstate=self.state
-        if self.previous_machine_state!="Opr" or self.previous_machine_control_action=="H":
+        if self.previous_machine_state!=(1 or "Opr") or self.previous_machine_control_action== ("H"):
             I_previous=0
-        elif self.previous_machine_state=="Opr" and self.previous_machine_control_action=="K":
+        elif self.previous_machine_state==(1 or "Opr") and self.previous_machine_control_action== ("K"):
             I_previous=1
         else:
             I_previous=0
-        if self.next_machine_state!="Opr" or self.next_machine_control_action=="H":
+        if self.next_machine_state!= (1 or "Opr") or self.next_machine_control_action=="H":
             I_next=0
-        elif self.next_machine_state=="Opr" and self.next_machine_control_action=="K":
+        elif self.next_machine_state== (1 or "Opr") and self.next_machine_control_action=="K":
             I_next=1
         else:
             I_next=0
@@ -396,6 +396,7 @@ class Microgrid(object):
          self.EAT_plot.append(self.EAT[t])
          self.time_steps_plot.append(t)
          self.Dt=abs(self.EAT[t] / self.AC[t])
+         print("self.Dt: ", self.Dt)
          self.Dt_plot.append(self.Dt)
          #if t!=0:
           #self.Dt=abs(self.EAT[t]) / self.AC[t-1] 
@@ -406,7 +407,6 @@ class Microgrid(object):
         # Battery life cycle at t C(Dt)
 
         if self.Dt != 0:
-            print("self.Dt: ",self.Dt)
             self.C_Dt[t] = alpha_0 * (self.Dt ** -alpha_1) * math.exp(-alpha_2 * self.Dt)
         else:
             self.C_Dt[t] = 0
@@ -417,24 +417,25 @@ class Microgrid(object):
         if self.C_Dt[t]!= 0 and self.f==0 and self.C_Dt[t-1]!= 0:
             #updated_capacity= self.actual_capacity - (self.Ebr/(2 * self.C_Dt))
             #self.actual_capacity= updated_capacity
-            self.AC[t+1]= self.AC[t] - (self.Ebr/(2 * self.C_Dt[t])) + (self.Ebr/(2 * self.C_Dt[t-1])) 
+            print("self.AC[t] for next AC:", self.AC[t],"self.C_Dt[t] is: ", self.C_Dt[t], "self.C_Dt[t-1]: ", self.C_Dt[t-1], "time is: ", t)
+            self.AC[t+1]= self.AC[t] - (self.Ebr/(2 * self.C_Dt[t])) + (self.Ebr/(2 * self.C_Dt[t-1]))
         elif self.f==1 and self.C_Dt[t] != 0 :
             #self.actual_capacity= self.actual_capacity
             self.AC[t+1]=self.AC[t] - (self.Ebr/(2 * self.C_Dt[t])) 
         else:
             self.AC[t+1]= self.AC[t]
-        # print("self.actual_capacity: ", self.AC)
+        # print("self.actual_capacity AC: ", self.AC)
         return self.actual_capacity
 
     def get_SOC_min(self, t):  # Muhammad
         # print("SoC_min is called here at t: ", t)
-        print("self.AC[t] in SOC_min is: ", self.AC[t])
+        # print("self.AC[t] in SOC_min is: ", self.AC[t])
         SOC_min= 0.05*self.AC[t]
         return SOC_min
 
     def get_SOC_max(self, t):  # Muhammad
         # print("SoC_max is called at time: ", t)
-        print(f"self.AC[t] in SOC_max is {self.AC[t]} at time step {t}")
+        # print(f"self.AC[t] in SOC_max is {self.AC[t]} at time step {t}")
         SOC_max = 0.95 * self.AC[t]
         # print("SOC Max: ", SOC_max)
         return SOC_max
@@ -477,20 +478,23 @@ class Microgrid(object):
         else:
             workingstatus[3-1]=0
         #determining the next decision epoch working status of generator, 1=working, 0=not working#
-        SOC=self.SOC+(self.actions_solar[2-1]+self.actions_wind[2-1]+self.actions_generator[2-1]+self.actions_purchased[2-1])*charging_discharging_efficiency-self.actions_discharged/charging_discharging_efficiency
+        # SOC=self.SOC+(self.actions_solar[2-1]+self.actions_wind[2-1]+self.actions_generator[2-1]+self.actions_purchased[2-1])*charging_discharging_efficiency-self.actions_discharged/charging_discharging_efficiency
+        self.SOC = self.SOC + (self.actions_solar[2 - 1] + self.actions_wind[2 - 1] + self.actions_generator[2 - 1] +
+                          self.actions_purchased[
+                              2 - 1]) * charging_discharging_efficiency - self.actions_discharged / charging_discharging_efficiency
         # print("EbT Before SoC_max: ", self.EbT)
-        print("SOC calculated in the transition of microgrid class: ", SOC)
+        print("SOC calculated in the transition of microgrid class: ", self.SOC)
         self.actual_capacity= self.get_actual_capacity_Eat(t)
         self.SOC_max= self.get_SOC_max(t) #Muhammad
         print("self.SOC_max: ", self.SOC_max)
         print("self.SOC_min: ", self.SOC_min)
         self.SOC_min= self.get_SOC_min(t) # Muhammad
-        if SOC>self.SOC_max:
-            SOC=self.SOC_max
-        if SOC<self.SOC_min:
-            SOC=self.SOC_min
+        if self.SOC>self.SOC_max:
+            self.SOC=self.SOC_max
+        if self.SOC<self.SOC_min:
+            self.SOC=self.SOC_min
         #determining the next desicion epoch SOC, state of charge of the battery system#
-        return workingstatus, SOC
+        return workingstatus, self.SOC
     
     def EnergyConsumption(self):
         #returns the energy consumption from the grid#
@@ -646,7 +650,7 @@ class ManufacturingSystem(object):
         buffer_states=[]
         for j in range(number_machines-1):
             buffer_states.append(self.buffer[j].NextState())
-        print("buffer states in transition_manuf: ", buffer_states)
+        # print("buffer states in transition_manuf: ", buffer_states)
         #based on current machine states and control actions taken, calculate the next states of all buffers#
         Off=[]
         Brk=[]
@@ -725,7 +729,7 @@ class ManufacturingSystem(object):
         TP=self.machine[number_machines-1].LastMachineProduction()*unit_reward_production
         #the sold back reward#
         SB=self.grid.SoldBackReward()
-        return TF+MC-TP-SB
+        return TP+SB-TF-MC #TF+MC-TP-SB
     
     def energydemand(self, current_rate_consumption_charge):
         #calculate the total energy demand TF of the system, based on the current machine, buffer, microgrid states and actions#
@@ -779,7 +783,7 @@ class ActionSimulation(object):
                  ):
         #the ManufacturingSystem is with new states S_{t+1} but old actions A_{t}, we obtain the admissible A_{t+1} in this class#
         self.System=System
-        print("self.system.machine_states in Action_simulation class: ", self.System.machine_states)
+        # print("self.system.machine_states in Action_simulation class: ", self.System.machine_states)
     def MachineActions(self):
         #Based on current machine states in the system, randomly uniformly simulate an admissible action for all machines#
         machine_actions=[]
@@ -807,7 +811,7 @@ class ActionSimulation(object):
         #from the updated proportionality parameter theta return the corresponding actions on solar, wind and generator#
         #theta is the proportionality parameters theta=[lambda_s^m, lambda_s^b, lambda_w^m, lambda_w^b, lambda_g^m, lambda_g^]#
         #calculate the energy generated by the solar PV, e_t^s#
-        print("theta: ", theta)
+        # print("theta: ", theta)
         energy_generated_solar=self.System.grid.energy_generated_solar()
         #calculate the energy generated by the wind turbine, e_t^w#
         energy_generated_wind=self.System.grid.energy_generated_wind()
@@ -850,6 +854,7 @@ class ActionSimulation(object):
             E_mfg=E_mfg+self.System.machine[i].EnergyConsumption()
             print(f"Machine {i} energy consumption is: {E_mfg}")
         #total energy consumed by the manufacturing system, summing over all machines#
+        print("E_mfg after")
         p_hat=E_mfg-(actions_solar[1-1]+actions_wind[1-1]+actions_generator[1-1])
         print(f"total energy consumed by manuf_system p_hat: {p_hat}")
         if p_hat<0:
