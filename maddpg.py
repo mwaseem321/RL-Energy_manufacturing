@@ -58,10 +58,11 @@ class MADDPG:
         # print("memory sample in learn: ", memory.sample_buffer())
         device = self.agents_all[0].actor.device
         # print("device in learn: ", device)
-        # print("action shape in learn: ", actions)
-        # print("states type: ", type(states))
+        # print("action shape in learn: ", type(actions),actions[-1].shape)
+        # print("states type: ", states[0].shape)
         states = T.tensor(states, dtype=T.float).to(device)
         actions = T.tensor(actions, dtype=T.float).to(device)
+
         rewards = T.tensor(rewards).to(device)
         states_ = T.tensor(states_, dtype=T.float).to(device)
         dones = T.tensor(dones).to(device)
@@ -69,87 +70,40 @@ class MADDPG:
         all_agents_new_actions = []
         all_agents_new_mu_actions = []
         old_agents_actions = []
-
         for agent_idx, agent in enumerate(self.agents_all):
             new_states = T.tensor(actor_new_states[agent_idx], 
                                  dtype=T.float).to(device)
 
             new_pi = agent.target_actor.forward(new_states.clone())
-            # print("agent_idx: ",agent_idx, "new_pi", new_pi)
-            all_agents_new_actions.append(new_pi)
+
+            if new_pi.shape == (5, 3):  # Check if the shape is (5, 3)
+                # Pad zeros to make the shape (5, 4)
+                zeros_padding = T.zeros((5, 1), dtype=new_pi.dtype, device=new_pi.device)
+                processed_pi = T.cat((new_pi, zeros_padding), dim=1)
+            else:
+                processed_pi = new_pi
+            # print("agent_idx: ", agent_idx, "new_pi", processed_pi.shape)
+
+            all_agents_new_actions.append(processed_pi)
+            # all_agents_new_actions.append(new_pi)
             mu_states = T.tensor(actor_states[agent_idx], 
                                  dtype=T.float).to(device)
             pi = agent.actor.forward(mu_states.clone())
-            all_agents_new_mu_actions.append(pi)
+
+            if pi.shape == (5, 3):  # Check if the shape is (5, 3)
+                # Pad zeros to make the shape (5, 4)
+                zeros_padding = T.zeros((5, 1), dtype=pi.dtype, device=pi.device)
+                procesed_pi = T.cat((pi, zeros_padding), dim=1)
+            else:
+                procesed_pi = pi
+            # print("agent_idx: ", agent_idx, "new_pi", procesed_pi.shape)
+            all_agents_new_mu_actions.append(procesed_pi)
+            # all_agents_new_mu_actions.append(pi)
             old_agents_actions.append(actions.clone()[agent_idx])
 
-        # print("all_agents_new_actions: ", len(all_agents_new_actions))
-        # print("all_agents_new_actions: ", all_agents_new_actions)
+        new_actions = T.cat([acts for acts in all_agents_new_actions], dim=1)
 
-        new_actions = []
-
-        for acts in all_agents_new_actions:
-            if isinstance(acts, tuple):
-                # If acts is a tuple, convert each tensor to the desired device
-                concat_new_acts = T.cat(acts, dim=0)
-                new_actions.append(concat_new_acts)
-            else:
-                # If acts is a tensor, convert it to the desired device
-                new_actions.append(acts)
-        # print("new_actions after concat: ", new_actions)
-
-        for i in range(5, 8):  # Last 3 tensors
-            # Extract the first 5 and last 5 values
-            first_five = new_actions[i][:5]
-            last_five = new_actions[i][-5:]
-
-            # Concatenate the first and last five values along the second dimension
-            modified_tensor = T.cat((first_five, last_five), dim=1)
-
-            # Append zeros to each row of the modified tensor
-            zeros_tensor = T.zeros((modified_tensor.size(0), 1)).to(device)
-            n_modified_tensor = T.cat((modified_tensor, zeros_tensor), dim=1)
-
-            # Update the tensor in the list
-            new_actions[i] = n_modified_tensor
-
-        # print("new_actions: ", new_actions)
-        # Concatenate the tensors along the specified dimension
-        new_actions = T.cat(new_actions, dim=1)
-        # print("new_actions after final concat: ", new_actions)
-
-        new_mu_actions = []
-        for acts in all_agents_new_mu_actions:
-            if isinstance(acts, tuple):
-                # If acts is a tuple, convert each tensor to the desired device
-                concat_new_acts = T.cat(acts, dim=0)
-                new_mu_actions.append(concat_new_acts)
-            else:
-                # If acts is a tensor, convert it to the desired device
-                new_mu_actions.append(acts)
-        # print("new_mu_actions after concat: ", new_mu_actions)
-
-        for i in range(5, 8):  # Last 3 tensors
-            # Extract the first 5 and last 5 values
-            first_five = new_mu_actions[i][:5]
-            last_five = new_mu_actions[i][-5:]
-
-            # Concatenate the first and last five values along the second dimension
-            modified_tensor = T.cat((first_five, last_five), dim=1)
-
-            # Append zeros to each row of the modified tensor
-            zeros_tensor = T.zeros((modified_tensor.size(0), 1)).to(device)
-            n_modified_tensor = T.cat((modified_tensor, zeros_tensor), dim=1)
-
-            # Update the tensor in the list
-            new_mu_actions[i] = n_modified_tensor
-
-        # print("new_mu_actions: ", new_actions)
-        # Concatenate the tensors along the specified dimension
-        mu = T.cat(new_mu_actions, dim=1)
-        # print("new_actions after final concat: ", new_actions)
-
-        # mu = T.cat([acts for acts in all_agents_new_mu_actions], dim=1)
+        mu = T.cat([acts for acts in all_agents_new_mu_actions], dim=1)
         old_actions = T.cat([acts for acts in old_agents_actions],dim=1)
 
         for agent_idx, agent in enumerate(self.agents_all):
@@ -169,6 +123,7 @@ class MADDPG:
             critic_loss.backward(retain_graph=True)
             agent.critic.optimizer.step()
 
+            # print("mu in the actor_loss:", mu.shape)
             actor_loss = agent.critic.forward(states, mu).flatten()
             actor_loss = -T.mean(actor_loss)
             agent.actor.optimizer.zero_grad()

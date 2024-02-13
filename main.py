@@ -64,25 +64,26 @@ if __name__ == '__main__':
     # for i in range(agents_cont):
     #     actor_dims_cont.append(len(cont_observation_space))
 
-    critic_dims = sum(actor_dims_disc) + sum(actor_dims_cont) + 24 # 24 is the all agents' actions
+    critic_dims = sum(actor_dims_disc) + sum(actor_dims_cont) + 32 # 27= 5x3 + 3x4 is the all agents' actions
 
     # action space is a list of arrays
     n_actions_disc = 3  # each machine has action space of three with H, K and W actions
-    n_actions_cont = 1 # continuous action space with a single action at a time
-    n_actions= [3,3,3,3,3,3,3,3]
+    n_actions_cont = 4 # continuous action space with a single action at a time
+    n_actions= [3,3,3,3,3,4,4,4]
+    n_actions_buffer = [4, 4, 4, 4, 4, 4, 4, 4] # used only for buffer initialization
     maddpg_agents = MADDPG(actor_dims_disc,actor_dims_cont, critic_dims, agents_disc, agents_cont,
                            n_actions_disc,n_actions_cont,
                            fc1=64, fc2=64,  
                            alpha=0.01, beta=0.01,
                            chkpt_dir='tmp/maddpg/')
 
-
+    # n_test= [4,4,4,4,4,4,4,4]
     memory = MultiAgentReplayBuffer(1000000, 37, actor_dims_disc+actor_dims_cont,
-                        n_actions, n_agents, batch_size=5)
+                        n_actions_buffer, n_agents, batch_size=5)
 
     PRINT_INTERVAL = 20
-    n_episodes = 50
-    episode_length = 200
+    n_episodes = 5
+    episode_length = 5
     total_steps = 500
     score_history = []
     evaluate = False
@@ -103,10 +104,10 @@ if __name__ == '__main__':
             print()
             print("Time step: ", episode_step)
             actions = maddpg_agents.choose_action(obs)
-            print(f"Actions chosen from maddpg are {actions}" )
+            # print(f"Actions chosen from maddpg are {actions}" )
             obs_, reward, _, info = env.step(actions, episode_step)
-            print(f"new obs received at step {episode_step} from step functions is {obs_}")
-            print(f"reward received from step function at timestep {episode_step} is {reward}")
+            # print(f"new obs received at step {episode_step} from step functions is {obs_}")
+            # print(f"reward received from step function at timestep {episode_step} is {reward}")
             state = obs_list_to_state_vector(obs)
             # print("state: ", state)
             # print("obs_: ", obs_)

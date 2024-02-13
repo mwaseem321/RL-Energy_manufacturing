@@ -89,7 +89,7 @@ class ContinuousAgent:
         self.max_action = max_action
         # print("cont_actor_dims:", actor_dims)
         self.actor = ContinuousActorNetwork(alpha, actor_dims,n_actions, fc1, fc2)
-        self.target_actor = ContinuousActorNetwork(alpha, actor_dims, fc1, fc2)
+        self.target_actor = ContinuousActorNetwork(alpha, actor_dims, n_actions, fc1, fc2)
 
         self.critic = ContinuousCriticNetwork(beta, critic_dims, fc1, fc2,
                                     chkpt_dir=chkpt_dir)
@@ -98,49 +98,27 @@ class ContinuousAgent:
 
         self.update_network_parameters(tau=1)
 
-    # def choose_action(self, observation, evaluate=False):
-    #     # print("observation: ", type(observation))
-    #     state = T.tensor(observation, dtype=T.float,
-    #                      device=self.actor.device)
-    #     # print("cont_state:", state)
-    #     actions = self.actor.forward(state)
-    #     noise = T.randn(size=(self.n_actions,)).to(self.actor.device)
-    #     noise *= T.tensor(1 - int(evaluate))
-    #     print("actions: ", type(actions), "noise: ", type(noise))
-    #     action = T.clamp(actions + noise,
-    #                      T.tensor(self.min_action, device=self.actor.device),
-    #                      T.tensor(self.max_action, device=self.actor.device))
-    #     return action.data.cpu().numpy()[0]
 
     def choose_action(self, observation, evaluate=False):
         state = T.tensor(observation, dtype=T.float, device=self.actor.device)
         actions = self.actor.forward(state)
+        # print("actions from the actor network in cont_agent: ", actions)
 
-        # Apply noise to each element of the actions tuple
-        noise = T.randn(size=(self.n_actions,)).to(self.actor.device)
-        noise *= T.tensor(1 - int(evaluate), dtype=T.float, device=self.actor.device)
+        # Ensure actions is a numpy array
+        actions = actions.cpu().detach().numpy()
 
-        # Apply the noise to each element of the actions tuple
-        actions_with_noise = tuple(a + noise for a in actions)
+        # Round first value to 0 or 1
+        actions[0][0] = 1 if actions[0][0] > 0.5 else 0
 
-        # Clamp each action component separately
-        clamped_actions = tuple(
-            T.clamp(
-                action,
-                T.tensor(self.min_action, device=self.actor.device),
-                T.tensor(self.max_action, device=self.actor.device)
-            )
-            for action in actions_with_noise
-        )
-        final_actions= tuple(action.data.cpu().numpy()[0] for action in clamped_actions) +(0,)
+        # Adjust the last three values to make their sum equal to 1
+        last_three_sum = np.sum(actions[0][1:])
+        if last_three_sum != 0:
+            actions[0][1:] = actions[0][1:] / last_three_sum
+        else:
+            actions[0][1:] = [1 / 3, 1 / 3, 1 / 3]
+        # print("Final array: ", actions)
+        return actions
 
-        action_values = [item[0] for item in final_actions[:-1]]  # Extract values except the last one
-        action_values.append(final_actions[-1])  # Append the last value
-
-        # Convert the list to a NumPy array
-        final_array = np.array(action_values, dtype=np.float32)
-        # print("final_actions: ", final_array)
-        return final_array
 
     def update_network_parameters(self, tau=None):
         tau = tau or self.tau

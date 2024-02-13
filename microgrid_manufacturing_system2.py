@@ -822,12 +822,12 @@ class ActionSimulation(object):
         # actions_wind=[energy_generated_wind*theta[3-1], energy_generated_wind*theta[4-1], energy_generated_wind*(1-theta[3-1]-theta[4-1])]
         # actions_generator=[energy_generated_generator*theta[5-1], energy_generated_generator*theta[6-1], energy_generated_generator*(1-theta[5-1]-theta[6-1])]
 
-        actions_solar = [energy_generated_solar * theta[0][1 - 1], energy_generated_solar * theta[0][2 - 1],
-                         energy_generated_solar * (theta[0][3 - 1])]
-        actions_wind = [energy_generated_wind * theta[1][1 - 1], energy_generated_wind * theta[1][2 - 1],
-                        energy_generated_wind * (theta[0][3 - 1])]
-        actions_generator = [energy_generated_generator * theta[2][1 - 1], energy_generated_generator * theta[2][2 - 1],
-                             energy_generated_generator * (theta[0][3 - 1])]
+        actions_solar = [energy_generated_solar * theta[0], energy_generated_solar * theta[1],
+                         energy_generated_solar * (theta[2])]
+        actions_wind = [energy_generated_wind * theta[3], energy_generated_wind * theta[4],
+                        energy_generated_wind * (theta[5])]
+        actions_generator = [energy_generated_generator * theta[6], energy_generated_generator * theta[7],
+                             energy_generated_generator * (theta[8])]
         print(f"actions generated in Action_simulation's MicrogridActionSolarWindGenerator function: actions_solar: {actions_solar}, actions_wind: {actions_wind}, actions_generator: {actions_generator}")
         return actions_solar, actions_wind, actions_generator
     

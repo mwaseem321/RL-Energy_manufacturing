@@ -47,20 +47,39 @@ class MultiAgentReplayBuffer:
         
         index = self.mem_cntr % self.mem_size
 
+        # Process the actions
+        processed_actions = []
+
+        for agent_idx in range(len(action)):
+            # Check if the action needs processing (i.e., last three agents)
+            if len(action[agent_idx].shape) == 2:
+                processed_action = action[agent_idx]  # No processing needed
+            else:
+                # Add an extra dimension and pad zeros for the first five agents
+                processed_action = np.expand_dims(action[agent_idx], axis=0)
+                processed_action = np.pad(processed_action, ((0, 0), (0, 1)), mode='constant')
+
+            processed_actions.append(processed_action)
+
         for agent_idx in range(self.n_agents):
             # print("self.actor_action_memory[agent_idx][index]: ", self.actor_action_memory[agent_idx][index])
             # print("action[agent_idx]: ", action[agent_idx])
             self.actor_state_memory[agent_idx][index] = raw_obs[agent_idx]
             self.actor_new_state_memory[agent_idx][index] = raw_obs_[agent_idx]
-            # print("self.actor_action_memory[agent_idx][index]: ", type(self.actor_action_memory[agent_idx][index]))
-            # print("action[agent_idx]: ", action[agent_idx], "type: ", type(action[agent_idx]))
-            # # Convert action[agent_idx] to a simple list of float values
-            if isinstance(action[agent_idx], tuple):
-                action[agent_idx] = [action[agent_idx][0][0], action[agent_idx][1][0], action[agent_idx][2]]
+
+            if isinstance(processed_actions[agent_idx], tuple):
+                processed_actions[agent_idx] = [processed_actions[agent_idx][0][0], processed_actions[agent_idx][1][0], processed_actions[agent_idx][2]]
             else:
-                action[agent_idx] = action[agent_idx]
-            # print("action[agent_idx] after: ",action[agent_idx])
-            self.actor_action_memory[agent_idx][index] = action[agent_idx]
+                processed_actions[agent_idx] = processed_actions[agent_idx]
+
+            # print("action[agent_idx] shape: ", processed_actions[agent_idx].shape)
+            #
+            # print("action[agent_idx] shape: ", processed_actions[agent_idx].shape)
+            # print("self.actor_action_memory[agent_idx][index]", self.actor_action_memory[agent_idx][index].shape)
+            # print("action[agent_idx] shape: ",action[agent_idx].shape)
+
+            # self.actor_action_memory[agent_idx][index] = action[agent_idx]
+            self.actor_action_memory[agent_idx][index] = processed_actions[agent_idx]
 
         # print("self.state_memory[index]: ", self.state_memory[index], "state: ", state)
         self.state_memory[index] = state

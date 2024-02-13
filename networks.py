@@ -21,6 +21,8 @@ class DiscreteCriticNetwork(nn.Module):
         self.to(self.device)
 
     def forward(self, state, action):
+        # print("state shape in forward: ", state.shape)
+        # print("action shape in forward: ", action.shape)
         x = F.relu(self.fc1(T.cat([state, action], dim=1)))
         x = F.relu(self.fc2(x))
         q = self.q(x)
@@ -88,24 +90,6 @@ class ContinuousActorNetwork(nn.Module):
         self.optimizer = optim.Adam(self.parameters(), lr=alpha)
         self.to(self.device)
 
-    # def forward(self, state):
-    #     if len(state.size()) == 1:
-    #         state = state.unsqueeze(0)
-    #
-    #     x = F.relu(self.fc1(state))
-    #     x = F.relu(self.fc2(x))
-    #
-    #     alpha = F.relu(self.alpha(x)) + 1.0
-    #     alpha = T.mean(alpha).view(1, 1)
-    #
-    #     beta = F.relu(self.beta(x)) + 1.0
-    #     beta = T.mean(beta).view(1, 1)
-    #
-    #     dist = Beta(alpha, beta)
-    #     action1 = dist.sample()
-    #     action2 = dist.sample()
-    #     print("action1: ", action1, "action2: ", action2)
-    #     return action1, action2
 
     def forward(self, state):
         if len(state.size()) == 1:
@@ -113,8 +97,6 @@ class ContinuousActorNetwork(nn.Module):
         x = F.relu(self.fc1(state))
         x = F.relu(self.fc2(x))
         # print("x.shape", x.shape)
-        # Flatten the batch dimension for alpha and beta layers
-        # x = x.view(-1, x.size(1))
 
         alpha = F.relu(self.alpha(x)) + 1.0
         if alpha.size() == T.Size([5, 64]):
@@ -123,14 +105,6 @@ class ContinuousActorNetwork(nn.Module):
         else:
             alpha = alpha
 
-        # if alpha.size() == T.Size([5, 1]):
-        #     # Reduce the size to [1, 1] by taking the mean and then reducing to a scalar
-        #     alpha_mean = T.mean(alpha)
-        #     alpha = alpha_mean.item()  # Convert tensor to scalar
-        # else:
-        #     # Handle other cases if necessary
-        #     alpha = alpha
-        # print("alpha: ", alpha)
         beta = F.relu(self.beta(x)) + 1.0
         if beta.size() == T.Size([5, 64]):
             # Reduce the size to [5, 1] by taking the mean along the second dimension
@@ -138,20 +112,13 @@ class ContinuousActorNetwork(nn.Module):
         else:
             beta = beta
 
-        # if beta.size() == T.Size([5, 1]):
-        #     # Reduce the size to [1, 1] by taking the mean and then reducing to a scalar
-        #     beta_mean = T.mean(beta)
-        #     beta = beta_mean.item()  # Convert tensor to scalar
-        # else:
-        #     # Handle other cases if necessary
-        #     beta = beta
-        # print("beta: ",beta)
-
         dist = Beta(alpha, beta)
         action1 = dist.sample()
         action2 = dist.sample()
+        action3 = dist.sample()
+        # action4 = dist.sample()
         # print("action1: ", action1, "action2: ", action2)
-        return action1, action2
+        return action1 #, action2, action3 #, action4
 
     def save_checkpoint(self):
         T.save(self.state_dict(), self.checkpoint_file)
