@@ -57,12 +57,6 @@ if __name__ == '__main__':
     n_agents = agents_disc+agents_cont #env.n, 5 machines and 3 sources of energy
     actor_dims_disc = [5,5,5,5,5]
     actor_dims_cont = [4,4,4]
-    # disc_observation_space = ["blo", "brk", "off", "idl", "buffer[i-1]", "buffer[i]"]
-    # cont_observation_space = ["solar_irrd","wind_speed","generator_cost", "SOC"]
-    # for i in range(agents_disc):
-    #     actor_dims_disc.append(len(disc_observation_space))
-    # for i in range(agents_cont):
-    #     actor_dims_cont.append(len(cont_observation_space))
 
     critic_dims = sum(actor_dims_disc) + sum(actor_dims_cont) + 32 # 27= 5x3 + 3x4 is the all agents' actions
 
@@ -82,8 +76,8 @@ if __name__ == '__main__':
                         n_actions_buffer, n_agents, batch_size=5)
 
     PRINT_INTERVAL = 20
-    n_episodes = 5
-    episode_length = 5
+    n_episodes = 10
+    episode_length = 500
     total_steps = 500
     score_history = []
     evaluate = False

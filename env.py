@@ -28,9 +28,14 @@ T=100
 class Env(object):
     def __init__(self):
         self.t= 0
-        self.workingstatus = [0, 0, 0]
+        self.working_status = [0, 0, 0]
         self.actions_purchased =  [0,0]
         self.actions_discharged= 0
+        self.actions_solar = [0, 0, 0]
+        self.actions_wind = [0, 0, 0]
+        self.actions_generator = [0, 0, 0]
+        self.actions_adjustingstatus= [0,0,0]
+        self.targetoutput=0
     def reset(self):
         # machine_obs[i]: [machine_status[i], buffer status[i-1, i]
         # solar_obs: [SOC,solar_energy]
@@ -46,14 +51,6 @@ class Env(object):
         self.SOC= reset_list[6][0]
         return reset_list
 
-    # def flatten_actions(self,actions):
-    #     self.flaten_actions=[]
-    #     for action in actions:
-    #         if isinstance(action, (list, np.ndarray)):
-    #             self.flatten_actions(action)
-    #         else:
-    #             self.flaten_actions.append(action)
-
     def step(self, actions, t):
         flat_actions = []
 
@@ -66,7 +63,7 @@ class Env(object):
 
         # Call the function with the list of actions
         flatten_actions(actions)
-        print("flat_actions in the step are: ", flat_actions)
+        # print("flat_actions in the step are: ", flat_actions)
         # theta= flat_actions[-9:-7] + flat_actions[-6:-4]+ flat_actions[-3:-1]
         # print("theta: ", theta)
         # print("actions in the step: ", flat_actions)
@@ -82,53 +79,17 @@ class Env(object):
 
     def get_obs(self, flat_actions, t):
         theta = flat_actions[-11:-8] + flat_actions[-7:-4] + flat_actions[-3:]
-        print("theta from the flat actions: ", theta)
-        # ManufacturingSystem()
-
-        # Random theta for testing!
-        # Define the number of lists
-        # num_lists = 3
-        # # Initialize the list of lists
-        # list_of_lists = []
-        #
-        # # Generate three lists
-        # for _ in range(num_lists):
-        #     # Generate two random numbers between 0 and 1
-        #     num1 = random.random()
-        #     num2 = random.random()
-        #
-        #     # Ensure the third number is positive and such that the sum of all three equals 1
-        #     # Randomize the third number based on the sum of the first two numbers
-        #     total_sum = num1 + num2
-        #     num3 = 1 - total_sum
-        #
-        #     # Ensure all numbers are positive
-        #     if num3 < 0:
-        #         # If num3 is negative, adjust num1 or num2 accordingly
-        #         adjustment = abs(num3)
-        #         if num1 >= num2:
-        #             num1 -= adjustment
-        #         else:
-        #             num2 -= adjustment
-        #
-        #     # Create the list
-        #     random_numbers = [num1, num2, max(0, num3)]  # Ensure num3 is positive
-        #
-        #     # Append the list to the list of lists
-        #     list_of_lists.append(random_numbers)
-        #
-        # theta = list_of_lists
-        # print("Random thetas generated in the step are: ", theta)
+        # print("theta from the flat actions: ", theta)
         machine_control_actions= []
-        solar_actions= theta[:-6]
-        # solar_actions.extend(flat_actions[-9:-6])
-        wind_actions= theta[-6:-3]
+        # solar_actions= theta[:-6]
+        # # solar_actions.extend(flat_actions[-9:-6])
+        # wind_actions= theta[-6:-3]
         # wind_actions.extend(flat_actions[-6:-3])
-        generator_actions= theta[-3:]
+        # generator_actions= theta[-3:]
         # generator_actions.extend(flat_actions[-3:])
-        print("solar_actions: ", theta[:-6])
-        print("wind_actions: ", theta[-6:-3])
-        print("generator_actions: ", theta[-3:])
+        # print("solar_actions: ", theta[:-6])
+        # print("wind_actions: ", theta[-6:-3])
+        # print("generator_actions: ", theta[-3:])
 
         for i in range(0, 15, 3): # 15 represents the actions of 5 machines i.e., 5x3
             # Get the three values for each machine
@@ -149,10 +110,10 @@ class Env(object):
             # Append the action to the list of actions for the machine
             machine_control_actions.append(action)
         # print("machine_control_actions in the step are: ", machine_control_actions)
-        actions_adjustingstatus = [flat_actions[-12]]+[flat_actions[-8]]+[flat_actions[-4]] #[random.randint(0, 1) for _ in range(3)] #[1, 1, 1]
-        print(" Random actions_adjustingstatus before initializing grid in the step are: ", actions_adjustingstatus)
+        # self.actions_adjustingstatus = [flat_actions[-12]]+[flat_actions[-8]]+[flat_actions[-4]] #[random.randint(0, 1) for _ in range(3)] #[1, 1, 1]
+        # print("Actions_adjustingstatus before initializing grid in the step are: ", self.actions_adjustingstatus)
         # print("self.workingstatus before initializing Microgrid class: ", self.workingstatus)
-        print("self.SOC before initializing Microgrid class: ", self.SOC)
+        # print("self.SOC before initializing Microgrid class: ", self.SOC)
         # print("self.actions_purchased before initializing Microgrid class: ", self.actions_purchased)
         # print("self.actions_discharged before initializing Microgrid class: ", self.actions_discharged)
         # print("solar actions extracted from flat_actions before initializing Microgrid class: ", solar_actions)
@@ -160,11 +121,36 @@ class Env(object):
         # print("generator_actions extracted from flat_actions before initializing Microgrid class: ", generator_actions)
         # print("solarirradiance[t] before grid initialization: ", solarirradiance[t])
         # print("windspeed[t] before grid initialization: ", windspeed[t])
-        grid= Microgrid(self.workingstatus, self.SOC,actions_adjustingstatus, solar_actions,wind_actions,generator_actions,self.actions_purchased,
-                        self.actions_discharged,
-                                solarirradiance= solarirradiance[t], #t//8640
-                                windspeed=windspeed[t], #t//8640
-                                t= t)
+        # grid= Microgrid(self.workingstatus, self.SOC,actions_adjustingstatus, solar_actions,wind_actions,generator_actions,self.actions_purchased,
+        #                 self.actions_discharged,
+        #                         solarirradiance= solarirradiance[t], #t//8640
+        #                         windspeed=windspeed[t], #t//8640
+        #                         t= t)
+
+        grid= Microgrid(self.working_status,
+                  self.SOC,
+                  self.actions_adjustingstatus,
+                  self.actions_solar,
+                  self.actions_wind,
+                  self.actions_generator,
+                  self.actions_purchased,
+                  self.actions_discharged,
+                  solarirradiance= solarirradiance[t],
+                  windspeed=windspeed[t],
+                  t=t
+                  )
+
+        self.working_status, self.SOC = grid.transition(t)
+        self.actions_adjustingstatus = [flat_actions[-12]] + [flat_actions[-8]] + [flat_actions[-4]]
+        solar_energy= grid.energy_generated_solar()
+        wind_energy= grid.energy_generated_wind()
+        generator_energy= grid.energy_generated_generator()
+        self.actions_solar = [solar_energy * theta[0], solar_energy * theta[1],
+                         solar_energy * (theta[2])]
+        self.actions_wind = [wind_energy * theta[3], wind_energy * theta[4],
+                        wind_energy * (theta[5])]
+        self.actions_generator = [generator_energy * theta[6], generator_energy * theta[7],
+                             generator_energy * (theta[8])]
         # Plot the updated values
         # plt.plot(grid.time_steps_plot, grid.EAT_plot, label='EAT')
         # # plt.plot(grid.time_steps_plot, grid.Dt_plot, label='Dt')
@@ -182,7 +168,7 @@ class Env(object):
         # print("self.machine_states before transition: ", self.machine_states)
         # print("Buffer states before transition: ", self.buffer_states )
         self.machine_states, self.buffer_states = self.system.transition_manufacturing()
-        # print("machine_states after transitioning: ", self.machine_states, "buffer_states after transitioning: ", self.buffer_states)
+        print("machine_states after transitioning: ", self.machine_states, "buffer_states after transitioning: ", self.buffer_states)
         # Define a dictionary to map machine states to observation values
         state_mapping = {'Off': 0, 'Opr': 1, 'Brk': 2, 'Sta': 3, 'Blo': 4}
 
@@ -201,23 +187,31 @@ class Env(object):
         # print("observation_disc",observation)
         # Actionsimulation.microgridActions_SolarWindGenerator
         action_sim= ActionSimulation(self.system)
-        solar_power, wind_power, generator_power = action_sim.MicroGridActions_SolarWindGenerator(theta)
-        self.actions_purchased, self.actions_discharged = action_sim.MicroGridActions_PurchasedDischarged(solar_power, wind_power, generator_power)
+        # solar_power, wind_power, generator_power = action_sim.MicroGridActions_SolarWindGenerator(theta)
+        self.actions_purchased, self.actions_discharged = action_sim.MicroGridActions_PurchasedDischarged(self.actions_solar, self.actions_wind, self.actions_generator)
         # print("self.actions_discharged: ", self.actions_discharged)
         # print("self.actions_purchased: ", self.actions_purchased)
+
+        # grid = Microgrid(self.workingstatus, self.SOC, self.actions_adjustingstatus, solar_power, wind_power,
+        #                  generator_power, self.actions_purchased,
+        #                                  self.actions_discharged,
+        #                                          solarirradiance= solarirradiance[t], #t//8640
+        #                                          windspeed=windspeed[t], #t//8640
+        #                                          t= t)
+
         # print("solar power before conversion: ", solar_power, "type: ", type(solar_power))
         # Convert solar_power to a simple list of float values
         # solar_power_flat = [float(array[0]) for array in solar_power]
         # wind_power_flat = [float(array[0]) for array in wind_power]
         # generator_power_flat = [float(array[0]) for array in generator_power]
         # print("solar_power and its type: ", solar_power_flat, type(solar_power_flat))
-        self.working_status, self.SOC = self.system.grid.transition(t)
-        print("solar_power:", solar_power,"wind_power:", wind_power, "generator_power: ", generator_power, "SOC: ", self.SOC )
+        # self.working_status, self.SOC = self.system.grid.transition(t)
+        # print("solar_power:", self.actions_solar,"wind_power:", self.actions_wind, "generator_power: ", self.actions_generator, "SOC: ", self.SOC )
 
         # Construct the observation with SOC followed by the power source values
-        observation.extend([self.SOC] + solar_power)
-        observation.extend([self.SOC] + wind_power)
-        observation.extend([self.SOC] + generator_power)
+        observation.extend([self.SOC] + self.actions_solar)
+        observation.extend([self.SOC] + self.actions_wind)
+        observation.extend([self.SOC] + self.actions_generator)
 
         # print("observation", observation)
         # Define the number of elements for the first five lists and subsequent lists
@@ -236,6 +230,8 @@ class Env(object):
             obs_list.append(observation[i:i + number_machines - 1])
         # return machine_states, buffer_states, SOC, solar_power, wind_power, generator_power
         # print("obs_list: ", obs_list)
+        self.targetoutput += int(self.system.throughput())
+        print("self.targetoutput: ", self.targetoutput)
         return obs_list
     def get_reward(self, t):
         # print("rate_consumption_charge: ", rate_consumption_charge[self.t//8640], "self.t:", t)

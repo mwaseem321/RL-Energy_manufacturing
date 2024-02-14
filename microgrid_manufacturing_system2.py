@@ -392,11 +392,11 @@ class Microgrid(object):
                             2 - 1]) * charging_discharging_efficiency - self.actions_discharged / charging_discharging_efficiency    
          
          # print("self.AC[t]: ", self.AC[t])
-         print("self.EAT[t]: ", self.EAT[t])
+         # print("self.EAT[t]: ", self.EAT[t])
          self.EAT_plot.append(self.EAT[t])
          self.time_steps_plot.append(t)
          self.Dt=abs(self.EAT[t] / self.AC[t])
-         print("self.Dt: ", self.Dt)
+         # print("self.Dt: ", self.Dt)
          self.Dt_plot.append(self.Dt)
          #if t!=0:
           #self.Dt=abs(self.EAT[t]) / self.AC[t-1] 
@@ -417,7 +417,7 @@ class Microgrid(object):
         if self.C_Dt[t]!= 0 and self.f==0 and self.C_Dt[t-1]!= 0:
             #updated_capacity= self.actual_capacity - (self.Ebr/(2 * self.C_Dt))
             #self.actual_capacity= updated_capacity
-            print("self.AC[t] for next AC:", self.AC[t],"self.C_Dt[t] is: ", self.C_Dt[t], "self.C_Dt[t-1]: ", self.C_Dt[t-1], "time is: ", t)
+            # print("self.AC[t] for next AC:", self.AC[t],"self.C_Dt[t] is: ", self.C_Dt[t], "self.C_Dt[t-1]: ", self.C_Dt[t-1], "time is: ", t)
             self.AC[t+1]= self.AC[t] - (self.Ebr/(2 * self.C_Dt[t])) + (self.Ebr/(2 * self.C_Dt[t-1]))
         elif self.f==1 and self.C_Dt[t] != 0 :
             #self.actual_capacity= self.actual_capacity
@@ -444,9 +444,9 @@ class Microgrid(object):
         C_cap= 33.4 #2400 # capital cost of the battery i.e., initial installation cost
         # C_Dt= self.get_battery_life_cycle_Ct(t)
         if self.f==0 and self.C_Dt[t]!=0 and self.C_Dt[t-1]!=0:
-            print("self.C_Dt[t]: ", self.C_Dt[t])
-            print("self.C_Dt[t-1]: ", self.C_Dt[t-1])
-            print("self.Ebr: ", self.Ebr)
+            # print("self.C_Dt[t]: ", self.C_Dt[t])
+            # print("self.C_Dt[t-1]: ", self.C_Dt[t-1])
+            # print("self.Ebr: ", self.Ebr)
             C_B= (C_cap*self.Ebr)/(2*self.C_Dt[t])-(C_cap*self.Ebr)/(2*self.C_Dt[t-1])
         elif self.f==1 and self.C_Dt[t]!=0:
             C_B = (C_cap * self.Ebr) / (2 * self.C_Dt[t])
@@ -483,11 +483,11 @@ class Microgrid(object):
                           self.actions_purchased[
                               2 - 1]) * charging_discharging_efficiency - self.actions_discharged / charging_discharging_efficiency
         # print("EbT Before SoC_max: ", self.EbT)
-        print("SOC calculated in the transition of microgrid class: ", self.SOC)
+        # print("SOC calculated in the transition of microgrid class: ", self.SOC)
         self.actual_capacity= self.get_actual_capacity_Eat(t)
         self.SOC_max= self.get_SOC_max(t) #Muhammad
-        print("self.SOC_max: ", self.SOC_max)
-        print("self.SOC_min: ", self.SOC_min)
+        # print("self.SOC_max: ", self.SOC_max)
+        # print("self.SOC_min: ", self.SOC_min)
         self.SOC_min= self.get_SOC_min(t) # Muhammad
         if self.SOC>self.SOC_max:
             self.SOC=self.SOC_max
@@ -549,11 +549,11 @@ class Microgrid(object):
 
         # calculate the energy generated bv the generator, e_t^g#
         Battery_degradation_cost= self.get_battery_degradation_cost(t)  # Muhammad
-        print("Battery degradation cost in main ftn is: ", Battery_degradation_cost)
+        # print("Battery degradation cost in main ftn is: ", Battery_degradation_cost)
         operational_cost=energy_generated_solar*unit_operational_cost_solar+energy_generated_wind*unit_operational_cost_wind+energy_generated_generator*unit_operational_cost_generator
-        print("operational_cost without battery degradation: ", operational_cost)
+        # print("operational_cost without battery degradation: ", operational_cost)
         operational_cost += Battery_degradation_cost  # Muhammad
-        print("operational_cost with battery degradation: ", operational_cost)
+        # print("operational_cost with battery degradation: ", operational_cost)
         # operational_cost+=(self.actions_discharged+self.actions_solar[2-1]+self.actions_wind[2-1]+self.actions_generator[2-1])*Delta_t*unit_operational_cost_battery/(2*capacity_battery_storage*(SOC_max-SOC_min))
         #calculate the operational cost for the onsite generation system#
         return operational_cost
@@ -727,6 +727,7 @@ class ManufacturingSystem(object):
         MC=self.grid.OperationalCost(t)
         #the prduction throughput of the manufacturing system#
         TP=self.machine[number_machines-1].LastMachineProduction()*unit_reward_production
+        # print("Throughput: ", TP)
         #the sold back reward#
         SB=self.grid.SoldBackReward()
         return TP+SB-TF-MC #TF+MC-TP-SB
@@ -828,7 +829,7 @@ class ActionSimulation(object):
                         energy_generated_wind * (theta[5])]
         actions_generator = [energy_generated_generator * theta[6], energy_generated_generator * theta[7],
                              energy_generated_generator * (theta[8])]
-        print(f"actions generated in Action_simulation's MicrogridActionSolarWindGenerator function: actions_solar: {actions_solar}, actions_wind: {actions_wind}, actions_generator: {actions_generator}")
+        # print(f"actions generated in Action_simulation's MicrogridActionSolarWindGenerator function: actions_solar: {actions_solar}, actions_wind: {actions_wind}, actions_generator: {actions_generator}")
         return actions_solar, actions_wind, actions_generator
     
     def MicroGridActions_PurchasedDischarged(self, 
@@ -837,12 +838,12 @@ class ActionSimulation(object):
                                              actions_generator=[0,0,0]):
         #randomly simulate an action that determines the use of the purchased energy and the energy discharge#
         #actions_solar, actions_wind, actions_generator are the actions to be taken at current system states#
-        print(f"Actions provided as input in the MicroGridActions_PurchasedDischarged: {actions_solar}, {actions_wind}, {actions_generator}")
+        # print(f"Actions provided as input in the MicroGridActions_PurchasedDischarged: {actions_solar}, {actions_wind}, {actions_generator}")
         TotalSoldBack=actions_solar[3-1]+actions_wind[3-1]+actions_generator[3-1]
-        print("TotalSoldBack: ", TotalSoldBack)
+        # print("TotalSoldBack: ", TotalSoldBack)
         #Total amount of sold back energy#
         TotalBattery=actions_solar[2-1]+actions_wind[2-1]+actions_generator[2-1]
-        print("TotalBattery: ", TotalBattery)
+        # print("TotalBattery: ", TotalBattery)
         #Total amount if energy charged to the battery#
         self.SOC_min= self.System.grid.SOC_min  # Muhammad
         # print("SOC_min before SOC_codition: ", self.SOC_min)
@@ -852,9 +853,9 @@ class ActionSimulation(object):
         E_mfg=0
         for i in range(number_machines):
             E_mfg=E_mfg+self.System.machine[i].EnergyConsumption()
-            print(f"Machine {i} energy consumption is: {E_mfg}")
+            # print(f"Machine {i} energy consumption is: {E_mfg}")
         #total energy consumed by the manufacturing system, summing over all machines#
-        print("E_mfg after")
+        # print("E_mfg after")
         p_hat=E_mfg-(actions_solar[1-1]+actions_wind[1-1]+actions_generator[1-1])
         print(f"total energy consumed by manuf_system p_hat: {p_hat}")
         if p_hat<0:
