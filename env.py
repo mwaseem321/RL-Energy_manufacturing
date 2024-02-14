@@ -37,7 +37,7 @@ class Env(object):
         self.actions_adjustingstatus= [0,0,0]
         self.targetoutput=0
     def reset(self):
-        # machine_obs[i]: [machine_status[i], buffer status[i-1, i]
+        # machine_obs[i]: [machine_status[i], buffers' status]
         # solar_obs: [SOC,solar_energy]
         # wind_obs: [SOC,wind_energy]
         # generator_obs: [SOC, generator_energy]
@@ -81,15 +81,6 @@ class Env(object):
         theta = flat_actions[-11:-8] + flat_actions[-7:-4] + flat_actions[-3:]
         # print("theta from the flat actions: ", theta)
         machine_control_actions= []
-        # solar_actions= theta[:-6]
-        # # solar_actions.extend(flat_actions[-9:-6])
-        # wind_actions= theta[-6:-3]
-        # wind_actions.extend(flat_actions[-6:-3])
-        # generator_actions= theta[-3:]
-        # generator_actions.extend(flat_actions[-3:])
-        # print("solar_actions: ", theta[:-6])
-        # print("wind_actions: ", theta[-6:-3])
-        # print("generator_actions: ", theta[-3:])
 
         for i in range(0, 15, 3): # 15 represents the actions of 5 machines i.e., 5x3
             # Get the three values for each machine
@@ -121,11 +112,6 @@ class Env(object):
         # print("generator_actions extracted from flat_actions before initializing Microgrid class: ", generator_actions)
         # print("solarirradiance[t] before grid initialization: ", solarirradiance[t])
         # print("windspeed[t] before grid initialization: ", windspeed[t])
-        # grid= Microgrid(self.workingstatus, self.SOC,actions_adjustingstatus, solar_actions,wind_actions,generator_actions,self.actions_purchased,
-        #                 self.actions_discharged,
-        #                         solarirradiance= solarirradiance[t], #t//8640
-        #                         windspeed=windspeed[t], #t//8640
-        #                         t= t)
 
         grid= Microgrid(self.working_status,
                   self.SOC,
@@ -151,16 +137,7 @@ class Env(object):
                         wind_energy * (theta[5])]
         self.actions_generator = [generator_energy * theta[6], generator_energy * theta[7],
                              generator_energy * (theta[8])]
-        # Plot the updated values
-        # plt.plot(grid.time_steps_plot, grid.EAT_plot, label='EAT')
-        # # plt.plot(grid.time_steps_plot, grid.Dt_plot, label='Dt')
-        # plt.xlabel('Time Step')
-        # plt.ylabel('Value')
-        # plt.title('Real-time Plot')
-        # plt.legend()
-        # plt.pause(0.05)  # Pause for a short duration to update the plot
-        # plt.clf()  # Clear the current figure
-        # plt.show()
+
         # print("self.machine_states before initializing manufacturingSystem class: ", self.machine_states)
         # print("self.buffer_states before initializing manufacturingSystem class: ", self.buffer_states)
         # print("machine_control_actions before initializing manufacturingSystem class: ", machine_control_actions)
@@ -191,13 +168,6 @@ class Env(object):
         self.actions_purchased, self.actions_discharged = action_sim.MicroGridActions_PurchasedDischarged(self.actions_solar, self.actions_wind, self.actions_generator)
         # print("self.actions_discharged: ", self.actions_discharged)
         # print("self.actions_purchased: ", self.actions_purchased)
-
-        # grid = Microgrid(self.workingstatus, self.SOC, self.actions_adjustingstatus, solar_power, wind_power,
-        #                  generator_power, self.actions_purchased,
-        #                                  self.actions_discharged,
-        #                                          solarirradiance= solarirradiance[t], #t//8640
-        #                                          windspeed=windspeed[t], #t//8640
-        #                                          t= t)
 
         # print("solar power before conversion: ", solar_power, "type: ", type(solar_power))
         # Convert solar_power to a simple list of float values

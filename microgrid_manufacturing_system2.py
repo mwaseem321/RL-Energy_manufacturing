@@ -154,11 +154,11 @@ class Machine(object):
         #Calculate the energy consumption of one machine in a time unit#
         PC=0 
         #PC is the amount drawn by a machine in a time unit#
-        if self.state== (2 or "Brk") or self.state==(0 or "Off"):
+        if self.state== 2 or self.state==0: #(2 or "Brk"),  (0 or "Off")
             PC=0
-        elif self.state== (1 or "Opr"):
+        elif self.state== 1: #(1 or "Opr")
             PC=self.power_consumption_Opr*Delta_t
-        elif self.state== (3 or "Sta") or self.state== (4 or "Blo"):
+        elif self.state== 3 or self.state== 4: # (3 or "Sta"), (4 or "Blo")
             PC=self.power_consumption_Idl*Delta_t
         # print(f"machine's state is {self.state} in the machine energy consumption function")
         # print("Energy consumption PC of each machine,:", PC)
@@ -166,22 +166,25 @@ class Machine(object):
 
     def LastMachineProduction(self):
         #only the last machine will produce that contributes to the throughput, when the state is Opr and the control action is K#
+        print("self.last_machine_status: ", self.is_last_machine)
+        print("self.state in last machine:", self.state, "self.control_action: ", self.control_action)
         if self.is_last_machine:
-            if self.state!="Opr" or self.control_action=="H":
+            if self.state!=  1 or self.control_action=="H": # ("Opr" or 1)
                 throughput=0
-            elif self.state=="Opr" and self.control_action=="K":
+            elif self.state== 1 and self.control_action=="K": #("Opr" or 1)
                 throughput=1
             else:
                 throughput=0
         else:
             throughput=0
+        print("throughout returned: ", throughput)
         return throughput
     
     def NextState_IsOff(self):
         #Based on the current state of the machine, determine if the state of the machine at next decision epoch is "Off"#
         #If is "Off" return True otherwise return False#
         #When return False, the next state lies in the set {"Brk", "Opr", "Sta", "Blo"}#
-        if self.state=="Off":
+        if self.state== ("Off" or 0):
             if self.control_action!="W":
                 IsOff=True
             else:
@@ -201,13 +204,13 @@ class Machine(object):
         #the random variable L is the lifetime#
         D=np.random.exponential(self.repairtime_mean)
         #the random variable D is the repair time# 
-        if self.state=="Brk":
+        if self.state== ("Brk" or 2):
             if D>=Delta_t:
                 IsBrk=True
             else:
                 IsBrk=False
         else:
-            if self.state!="Off":
+            if self.state!= ("Off" or 0):
                 if L<Delta_t:
                     IsBrk=True
                 else:
@@ -262,15 +265,15 @@ class Buffer(object):
     def NextState(self):
         #calculate the state of the buffer at next decision epoch, return this state#
         nextstate=self.state
-        if self.previous_machine_state!=(1 or "Opr") or self.previous_machine_control_action== ("H"):
+        if self.previous_machine_state!=1 or self.previous_machine_control_action== ("H"): #(1 or "Opr")
             I_previous=0
-        elif self.previous_machine_state==(1 or "Opr") and self.previous_machine_control_action== ("K"):
+        elif self.previous_machine_state==1 and self.previous_machine_control_action== ("K"): #(1 or "Opr")
             I_previous=1
         else:
             I_previous=0
-        if self.next_machine_state!= (1 or "Opr") or self.next_machine_control_action=="H":
+        if self.next_machine_state!= 1 or self.next_machine_control_action=="H": #(1 or "Opr")
             I_next=0
-        elif self.next_machine_state== (1 or "Opr") and self.next_machine_control_action=="K":
+        elif self.next_machine_state== 1 and self.next_machine_control_action=="K": #(1 or "Opr")
             I_next=1
         else:
             I_next=0
@@ -789,13 +792,13 @@ class ActionSimulation(object):
         #Based on current machine states in the system, randomly uniformly simulate an admissible action for all machines#
         machine_actions=[]
         for i in range(number_machines):
-            if self.System.machine_states[i]=="Opr":
+            if self.System.machine_states[i]==1: #("Opr" or 1)
                 machine_actions.append(choice(["K", "H"]))
-            elif self.System.machine_states[i]=="Blo":
+            elif self.System.machine_states[i]==4: #("Blo" or 4)
                 machine_actions.append(choice(["K", "H"]))
-            elif self.System.machine_states[i]=="Sta":
+            elif self.System.machine_states[i]==3: # ("Sta"or 3)
                 machine_actions.append(choice(["K", "H"]))
-            elif self.System.machine_states[i]=="Off":
+            elif self.System.machine_states[i]==0: #("Off" or 0)
                 machine_actions.append(choice(["K", "W"]))
             else:
                 machine_actions.append("K")
@@ -1030,22 +1033,22 @@ class MachineActionTree(object):
     def BuildTree(self, System, level, tree):
         #build the tree with root "ROOT", each level corresponding to admissible machine actions for the machine at that level#
         if level < number_machines:
-            if System.machine_states[level]=="Opr":
+            if System.machine_states[level]==1: #("Opr" or 1)
                 tree.InsertLeft("K")
                 self.BuildTree(System, level+1, tree.left_child)
                 tree.InsertRight("H")
                 self.BuildTree(System, level+1, tree.right_child)
-            elif System.machine_states[level]=="Blo":
+            elif System.machine_states[level]== 4: #("Blo" or 4)
                 tree.InsertLeft("K")
                 self.BuildTree(System, level+1, tree.left_child)
                 tree.InsertRight("H")
                 self.BuildTree(System, level+1, tree.right_child)
-            elif System.machine_states[level]=="Sta":
+            elif System.machine_states[level]== 3: #("Sta" or 3)
                 tree.InsertLeft("K")
                 self.BuildTree(System, level+1, tree.left_child)
                 tree.InsertRight("H")
                 self.BuildTree(System, level+1, tree.right_child)
-            elif System.machine_states[level]=="Off":
+            elif System.machine_states[level]== 0: #("Off" or 0)
                 tree.InsertLeft("K")
                 self.BuildTree(System, level+1, tree.left_child)
                 tree.InsertRight("W")
