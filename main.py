@@ -75,20 +75,22 @@ if __name__ == '__main__':
     memory = MultiAgentReplayBuffer(1000000, 37, actor_dims_disc+actor_dims_cont,
                         n_actions_buffer, n_agents, batch_size=5)
 
-    PRINT_INTERVAL = 20
-    n_episodes = 10
-    episode_length = 500
+    PRINT_INTERVAL = 100
+    n_episodes = 50
+    episode_length = 100
     total_steps = 500
     score_history = []
     evaluate = False
     best_score = 0
+    # List to store rewards for each episode
 
     if evaluate:
         maddpg_agents.load_checkpoint()
 
     for i in range(n_episodes):
         obs = env.reset()
-        print(f"Environment is reset here as {obs}")
+        print(f"Episode {i}")
+        # print(f"Environment is reset here as {obs}")
         score = 0
         done = [False]*n_agents
         episode_step = 0
@@ -124,7 +126,19 @@ if __name__ == '__main__':
         avg_score = np.mean(score_history[-100:])
         if not evaluate:
             if avg_score > best_score:
-                maddpg_agents.save_checkpoint()
+                # maddpg_agents.save_checkpoint()
                 best_score = avg_score
         if i % PRINT_INTERVAL == 0 and i > 0:
             print('episode', i, 'average score {:.1f}'.format(avg_score))
+
+# Compute rolling average of rewards
+    window_size = 10
+    rolling_avg_rewards = [np.mean(score_history[max(0, j - window_size):j + 1]) for j in range(1, len(score_history))]
+
+    # Plot rolling average rewards
+    plt.plot(range(1, len(rolling_avg_rewards) + 1), rolling_avg_rewards, marker='o')
+    plt.xlabel('Episode')
+    plt.ylabel('Rolling Average Reward')
+    plt.title('Convergence along Training')
+    plt.grid(True)
+    plt.show()
