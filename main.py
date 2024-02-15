@@ -59,6 +59,7 @@ if __name__ == '__main__':
     actor_dims_cont = [4,4,4]
 
     critic_dims = sum(actor_dims_disc) + sum(actor_dims_cont) + 32 # 27= 5x3 + 3x4 is the all agents' actions
+    # 32 is to accomodate the padded five discrete agents' actions
 
     # action space is a list of arrays
     n_actions_disc = 3  # each machine has action space of three with H, K and W actions
@@ -73,11 +74,11 @@ if __name__ == '__main__':
 
     # n_test= [4,4,4,4,4,4,4,4]
     memory = MultiAgentReplayBuffer(1000000, 37, actor_dims_disc+actor_dims_cont,
-                        n_actions_buffer, n_agents, batch_size=5)
+                        n_actions_buffer, n_agents, batch_size=64)
 
     PRINT_INTERVAL = 100
-    n_episodes = 50
-    episode_length = 100
+    n_episodes = 200
+    episode_length = 2000
     total_steps = 500
     score_history = []
     evaluate = False
@@ -87,58 +88,119 @@ if __name__ == '__main__':
     if evaluate:
         maddpg_agents.load_checkpoint()
 
-    for i in range(n_episodes):
+#     for i in range(n_episodes):
+#         obs = env.reset()
+#         print(f"Episode {i}")
+#         # print(f"Environment is reset here as {obs}")
+#         score = 0
+#         done = [False]*n_agents
+#         episode_step = 0
+#         while not any(done):
+#             # print("while loop starts here")
+#             print()
+#             print()
+#             print("Time step: ", episode_step)
+#             actions = maddpg_agents.choose_action(obs)
+#             # print(f"Actions chosen from maddpg are {actions}" )
+#             obs_, reward, _, info = env.step(actions, episode_step)
+#             # print(f"new obs received at step {episode_step} from step functions is {obs_}")
+#             # print(f"reward received from step function at timestep {episode_step} is {reward}")
+#             state = obs_list_to_state_vector(obs)
+#             # print("state: ", state)
+#             # print("obs_: ", obs_)
+#             state_ = obs_list_to_state_vector(obs_)
+#
+#             if episode_step >= episode_length:
+#                 done = [True]*n_agents
+#
+#             memory.store_transition(obs, state, actions, reward, obs_, state_, done)
+#
+#             if total_steps % 5 == 0 and not evaluate:
+#                 maddpg_agents.learn(memory)
+#             obs = obs_
+#             # print("reward: ", reward)
+#             score += reward
+#             total_steps += 1
+#             episode_step += 1
+#         # print("coming out of while loop!")
+#         score_history.append(score)
+#         avg_score = np.mean(score_history[-100:])
+#         if not evaluate:
+#             if avg_score > best_score:
+#                 # maddpg_agents.save_checkpoint()
+#                 best_score = avg_score
+#         if i % PRINT_INTERVAL == 0 and i > 0:
+#             print('episode', i, 'average score {:.1f}'.format(avg_score))
+#
+# # Compute rolling average of rewards
+#     window_size = 10
+#     rolling_avg_rewards = [np.mean(score_history[max(0, j - window_size):j + 1]) for j in range(1, len(score_history))]
+#
+#     # Plot rolling average rewards
+#     plt.plot(range(1, len(rolling_avg_rewards) + 1), rolling_avg_rewards, marker='o')
+#     plt.xlabel('Episode')
+#     plt.ylabel('Rolling Average Reward')
+#     plt.title('Convergence along Training')
+#     plt.grid(True)
+#     plt.show()
+
+
+# Continuous training
+
+# Define your reinforcement learning algorithm and environment
+
+# Initialize variables
+    rewards_window = []  # Store last 100 rewards
+    all_rewards = []  # Store all rewards
+    episode_count = 0
+    converged = False
+    half_episodes = n_episodes // 2  # Number of episodes for half threshold #n_episodes
+
+    # Training loop
+    while not converged and episode_count < n_episodes:
         obs = env.reset()
-        print(f"Episode {i}")
-        # print(f"Environment is reset here as {obs}")
         score = 0
-        done = [False]*n_agents
+        done = [False] * n_agents
         episode_step = 0
+
         while not any(done):
-            # print("while loop starts here")
-            print()
-            print()
-            print("Time step: ", episode_step)
             actions = maddpg_agents.choose_action(obs)
-            # print(f"Actions chosen from maddpg are {actions}" )
             obs_, reward, _, info = env.step(actions, episode_step)
-            # print(f"new obs received at step {episode_step} from step functions is {obs_}")
-            # print(f"reward received from step function at timestep {episode_step} is {reward}")
             state = obs_list_to_state_vector(obs)
-            # print("state: ", state)
-            # print("obs_: ", obs_)
             state_ = obs_list_to_state_vector(obs_)
 
             if episode_step >= episode_length:
-                done = [True]*n_agents
+                done = [True] * n_agents
 
             memory.store_transition(obs, state, actions, reward, obs_, state_, done)
 
             if total_steps % 5 == 0 and not evaluate:
                 maddpg_agents.learn(memory)
             obs = obs_
-            # print("reward: ", reward)
             score += reward
             total_steps += 1
             episode_step += 1
-        # print("coming out of while loop!")
-        score_history.append(score)
-        avg_score = np.mean(score_history[-100:])
-        if not evaluate:
-            if avg_score > best_score:
-                # maddpg_agents.save_checkpoint()
-                best_score = avg_score
-        if i % PRINT_INTERVAL == 0 and i > 0:
-            print('episode', i, 'average score {:.1f}'.format(avg_score))
 
-# Compute rolling average of rewards
-    window_size = 10
-    rolling_avg_rewards = [np.mean(score_history[max(0, j - window_size):j + 1]) for j in range(1, len(score_history))]
+        rewards_window.append(score)
+        all_rewards.append(score)
 
-    # Plot rolling average rewards
-    plt.plot(range(1, len(rolling_avg_rewards) + 1), rolling_avg_rewards, marker='o')
+        # Check for convergence condition
+        if len(all_rewards) >= 100:
+            last_100_rewards = rewards_window[-100:]
+            variance = np.var(last_100_rewards)
+            mean_reward = np.mean(last_100_rewards)
+            variance_threshold = 0.1 * mean_reward
+
+            if variance <= variance_threshold and episode_count >= half_episodes:
+                converged = True
+
+        # Update episode count
+        episode_count += 1
+
+    # Plot rewards
+    plt.plot(all_rewards)
     plt.xlabel('Episode')
-    plt.ylabel('Rolling Average Reward')
-    plt.title('Convergence along Training')
-    plt.grid(True)
+    plt.ylabel('Reward')
+    plt.title('Reward per Episode')
+    plt.savefig('reward_per_episode.png')
     plt.show()
