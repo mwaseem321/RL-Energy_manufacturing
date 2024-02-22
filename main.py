@@ -1,3 +1,5 @@
+import csv
+
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -68,8 +70,8 @@ if __name__ == '__main__':
     n_actions_buffer = [4, 4, 4, 4, 4, 4, 4, 4] # used only for buffer initialization
     maddpg_agents = MADDPG(actor_dims_disc,actor_dims_cont, critic_dims, agents_disc, agents_cont,
                            n_actions_disc,n_actions_cont,
-                           fc1=64, fc2=64,  
-                           alpha=0.01, beta=0.01,
+                           fc1=128, fc2=128,
+                           alpha=0.001, beta=0.01,
                            chkpt_dir='tmp/maddpg/')
 
     # n_test= [4,4,4,4,4,4,4,4]
@@ -77,7 +79,7 @@ if __name__ == '__main__':
                         n_actions_buffer, n_agents, batch_size=64)
 
     PRINT_INTERVAL = 100
-    n_episodes = 200
+    n_episodes = 1000
     episode_length = 2000
     total_steps = 500
     score_history = []
@@ -88,87 +90,43 @@ if __name__ == '__main__':
     if evaluate:
         maddpg_agents.load_checkpoint()
 
-#     for i in range(n_episodes):
-#         obs = env.reset()
-#         print(f"Episode {i}")
-#         # print(f"Environment is reset here as {obs}")
-#         score = 0
-#         done = [False]*n_agents
-#         episode_step = 0
-#         while not any(done):
-#             # print("while loop starts here")
-#             print()
-#             print()
-#             print("Time step: ", episode_step)
-#             actions = maddpg_agents.choose_action(obs)
-#             # print(f"Actions chosen from maddpg are {actions}" )
-#             obs_, reward, _, info = env.step(actions, episode_step)
-#             # print(f"new obs received at step {episode_step} from step functions is {obs_}")
-#             # print(f"reward received from step function at timestep {episode_step} is {reward}")
-#             state = obs_list_to_state_vector(obs)
-#             # print("state: ", state)
-#             # print("obs_: ", obs_)
-#             state_ = obs_list_to_state_vector(obs_)
-#
-#             if episode_step >= episode_length:
-#                 done = [True]*n_agents
-#
-#             memory.store_transition(obs, state, actions, reward, obs_, state_, done)
-#
-#             if total_steps % 5 == 0 and not evaluate:
-#                 maddpg_agents.learn(memory)
-#             obs = obs_
-#             # print("reward: ", reward)
-#             score += reward
-#             total_steps += 1
-#             episode_step += 1
-#         # print("coming out of while loop!")
-#         score_history.append(score)
-#         avg_score = np.mean(score_history[-100:])
-#         if not evaluate:
-#             if avg_score > best_score:
-#                 # maddpg_agents.save_checkpoint()
-#                 best_score = avg_score
-#         if i % PRINT_INTERVAL == 0 and i > 0:
-#             print('episode', i, 'average score {:.1f}'.format(avg_score))
-#
-# # Compute rolling average of rewards
-#     window_size = 10
-#     rolling_avg_rewards = [np.mean(score_history[max(0, j - window_size):j + 1]) for j in range(1, len(score_history))]
-#
-#     # Plot rolling average rewards
-#     plt.plot(range(1, len(rolling_avg_rewards) + 1), rolling_avg_rewards, marker='o')
-#     plt.xlabel('Episode')
-#     plt.ylabel('Rolling Average Reward')
-#     plt.title('Convergence along Training')
-#     plt.grid(True)
-#     plt.show()
-
-
 # Continuous training
 
 # Define your reinforcement learning algorithm and environment
 
 # Initialize variables
     rewards_window = []  # Store last 100 rewards
+    rewards_window_discounted= []
     all_rewards = []  # Store all rewards
+    all_rewards_discounted = []  # Store all rewards
     episode_count = 0
     converged = False
     half_episodes = n_episodes // 2  # Number of episodes for half threshold #n_episodes
-
+    reward_1 = 0  # based on base code's reward function
+    reward_seq = []
     # Training loop
-    while not converged and episode_count < n_episodes:
+    while not converged:
         obs = env.reset()
         score = 0
+        score_discounted= 0
         done = [False] * n_agents
         episode_step = 0
 
         while not any(done):
+            print()
+            print("Timestep: ", episode_step)
+            print()
             actions = maddpg_agents.choose_action(obs)
             obs_, reward, _, info = env.step(actions, episode_step)
             state = obs_list_to_state_vector(obs)
             state_ = obs_list_to_state_vector(obs_)
+            with open("normal_reward.txt", "a") as file:
+                file.write(str(reward) + "\n")
 
+            reward_1 = reward_1 + np.power(gamma, episode_step) * reward  # reward represent the E from main code and reward_1 is the reward from there
+            with open("discounted_reward.txt", "a") as file:
+                file.write(str(reward_1) + "\n")
+            reward_seq.append(reward_1)
             if episode_step >= episode_length:
                 done = [True] * n_agents
 
@@ -178,11 +136,18 @@ if __name__ == '__main__':
                 maddpg_agents.learn(memory)
             obs = obs_
             score += reward
+            score_discounted+=reward_1
             total_steps += 1
             episode_step += 1
 
         rewards_window.append(score)
+        with open("normal_reward_window.txt", "a") as file:
+            file.write(str(score) + "\n")
         all_rewards.append(score)
+        rewards_window_discounted.append(score_discounted)
+        with open("discounted_reward_window.txt", "a") as file:
+            file.write(str(score_discounted) + "\n")
+        all_rewards_discounted.append(score_discounted)
 
         # Check for convergence condition
         if len(all_rewards) >= 100:
@@ -203,4 +168,84 @@ if __name__ == '__main__':
     plt.ylabel('Reward')
     plt.title('Reward per Episode')
     plt.savefig('reward_per_episode.png')
+
+    plt.plot(reward_seq)
+    plt.xlabel('Episode')
+    plt.ylabel('Average Reward')
+    plt.title('Reward per Episode')
+    plt.savefig('Reward based on previous code.png')
+
+    # testing loop here
+    totalcostlist_optimal = [0]
+    totalthroughputlist_optimal = [0]
+    totalenergydemandlist_optimal = [0]
+
+    # set the total cost, total throughput and the total energy demand#
+    totalcost = 0
+    totalthroughput = 0
+    totalenergydemand = 0
+    RL_target_output = 0
+    grid = Microgrid(env.working_status,
+                     env.SOC,
+                     env.actions_adjustingstatus,
+                     env.actions_solar,
+                     env.actions_wind,
+                     env.actions_generator,
+                     env.actions_purchased,
+                     env.actions_discharged,
+                     solarirradiance=solarirradiance[env.t],
+                     windspeed=windspeed[env.t],
+                     t=env.t
+                     )
+    system = ManufacturingSystem(env.machine_states, env.machine_control_actions, env.buffer_states, grid)
+    obs= env.reset()
+    for i in range(100):
+        actions = maddpg_agents.choose_action(obs)
+        obs_, reward, _, info = env.step(actions, i)
+        totalthroughput += system.throughput()
+        RL_target_output += int(system.throughput() / unit_reward_production)
+        totalthroughputlist_optimal.append(totalthroughput)
+        # calculate the total cost at S_t, A_t: E(S_t, A_t)#
+        E = system.average_total_cost(rate_consumption_charge[i // 8640])
+        # accumulate the total cost#
+        totalcost += E
+        totalcostlist_optimal.append(totalcost)
+        # accumulate the total energy demand#
+        totalenergydemand += system.energydemand(rate_consumption_charge[i // 8640])
+        totalenergydemandlist_optimal.append(totalenergydemand)
+        # determine the next system and grid states#
+        env.machine_states, env.buffer_states = system.transition_manufacturing()
+        env.working_status, env.SOC = system.grid.transition()
+        obs= obs_
+
+    # plot the total throughput, in dollar amount#
+    plt.figure(figsize=(14, 10))
+    plt.plot([value * 10000 for value in totalthroughputlist_optimal], '-', color='r')
+    # plt.plot([value * 10000 for value in totalthroughputlist_benchmark], '--', color='b')
+    plt.xlabel('iteration')
+    plt.ylabel('total throughput ($)')
+    plt.title('Total throughput under optimal policy (red, solid) and benchmark random policy (blue, dashed)')
+    plt.savefig('totalthroughput.png')
     plt.show()
+
+    # plot the total throughput, in production units#
+    plt.figure(figsize=(14, 10))
+    plt.plot([value / unit_reward_production for value in totalthroughputlist_optimal], '-', color='r')
+    # plt.plot([value / unit_reward_production for value in totalthroughputlist_benchmark], '--', color='b')
+    plt.xlabel('iteration')
+    plt.ylabel('total throughput (production unit)')
+    plt.title(
+        'Total throughput (production unit) under optimal policy (red, solid) and benchmark random policy (blue, dashed)')
+    plt.savefig('totalthroughput_unit.png')
+    plt.show()
+
+    # plot the total energy demand#
+    plt.figure(figsize=(14, 10))
+    plt.plot([value * 10000 for value in totalenergydemandlist_optimal], '-', color='r')
+    # plt.plot([value * 10000 for value in totalenergydemandlist_benchmark], '--', color='b')
+    plt.xlabel('iteration')
+    plt.ylabel('total energy cost ($)')
+    plt.title('Total energy cost under optimal policy (red, solid) and benchmark random policy (blue, dashed)')
+    plt.savefig('totalenergycost.png')
+    plt.show()
+
