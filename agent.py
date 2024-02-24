@@ -28,14 +28,20 @@ class DiscreteAgent:
         self.update_network_parameters(tau=1)
 
     def choose_action(self, observation):
-        # print("observation in choose action: ", observation)
-        state = T.tensor([observation], dtype=T.float).to(self.actor.device)
-        # print("disc_state: ", state)
-        actions = self.actor.forward(state.clone())
-        noise = T.rand(self.n_actions).to(self.actor.device)
-        action = actions + noise
-
-        return action.detach().cpu().numpy()[0]
+        toss = np.random.rand()
+        if toss < 0.2:
+            action= np.random.rand(3)
+        else:
+            # print("observation in choose action: ", observation)
+            state = T.tensor([observation], dtype=T.float).to(self.actor.device)
+            # print("disc_state: ", state)
+            actions = self.actor.forward(state.clone())
+            noise = T.rand(self.n_actions).to(self.actor.device)
+            action = actions + noise
+            action= action.detach().cpu().numpy()[0]
+            # print("action.detach().cpu().numpy()[0]: ", type(action.detach().cpu().numpy()[0]))
+        return action
+        # return action.detach().cpu().numpy()[0]
 
     def update_network_parameters(self, tau=None):
         if tau is None:
@@ -110,6 +116,7 @@ class ContinuousAgent:
         # Round first value to 0 or 1
         actions[0][0] = 1 if actions[0][0] > 0.5 else 0
 
+        # print("actions in agent: ", actions)
         # Adjust the last three values to make their sum equal to 1
         last_three_sum = np.sum(actions[0][1:])
         if last_three_sum != 0:
