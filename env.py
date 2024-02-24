@@ -43,7 +43,7 @@ class Env(object):
         # generator_obs: [SOC, generator_energy]
         #[0: off, 1: opr, 2: brk, 3: sta, 4: blo]
         # return [["off", buffer levels], ["off", 0, 0], ["off", 0, 0], ["off", 0, 0], ["off", 0], [0, 0], [0, 0], [0, 0]]
-        reset_list= [[0, 0,0,0, 0],[0,0,0,0,0 ],[0,0,0,0,0], [0,0,0,0,0], [0,0,0,0,0], [0,0,0,0], [0,0,0,0], [0,0,0,0]]
+        reset_list= [[0, 10,10,10, 10],[0,10,10,10, 10 ],[0,10,10,10, 10], [0,10,10,10, 10], [0,10,10,10, 10], [0,0,0,0], [0,0,0,0], [0,0,0,0]]
         self.machine_states= [sublist[0] for sublist in reset_list[:5]]
         # print("self.machine_states: ", self.machine_states)
         self.buffer_states= reset_list[0][1:]
@@ -63,14 +63,17 @@ class Env(object):
 
         # Call the function with the list of actions
         flatten_actions(actions)
-        # print("flat_actions in the step are: ", flat_actions)
+        print("flat_actions in the step are: ", flat_actions)
         # theta= flat_actions[-9:-7] + flat_actions[-6:-4]+ flat_actions[-3:-1]
         # print("theta: ", theta)
         # print("actions in the step: ", flat_actions)
         # print("timestep: ", t)
         obs_= self.get_obs(flat_actions, t)
+        print("observations list from get_obs(): ", obs_)
         self.machine_states = [sublist[0] for sublist in obs_[:5]]
         self.buffer_states = obs_[0][1:]
+        print("self.machine_states after get_obs() in step function: ", self.machine_states)
+        print("self.buffer_states after get_obs() in step function: ", self.buffer_states)
         self.SOC = obs_[6][0]
         reward= self.get_reward(t)
         done= self.is_done(t)
@@ -79,8 +82,8 @@ class Env(object):
 
     def get_obs(self, flat_actions, t):
         theta = flat_actions[-11:-8] + flat_actions[-7:-4] + flat_actions[-3:]
-        # print("theta from the flat actions: ", theta)
-        machine_control_actions= []
+        print("theta from the flat actions: ", theta)
+        self.machine_control_actions= []
 
         for i in range(0, 15, 3): # 15 represents the actions of 5 machines i.e., 5x3
             # Get the three values for each machine
@@ -92,15 +95,15 @@ class Env(object):
 
             # Assign the action based on the index
             if action_index == 0:
-                action = "K"
+                action = "W"
             elif action_index == 1:
                 action = "H"
             else:
-                action = "W"
+                action = "K"
 
             # Append the action to the list of actions for the machine
-            machine_control_actions.append(action)
-        # print("machine_control_actions in the step are: ", machine_control_actions)
+            self.machine_control_actions.append(action)
+        print("machine_control_actions in the step are: ", self.machine_control_actions)
         # self.actions_adjustingstatus = [flat_actions[-12]]+[flat_actions[-8]]+[flat_actions[-4]] #[random.randint(0, 1) for _ in range(3)] #[1, 1, 1]
         # print("Actions_adjustingstatus before initializing grid in the step are: ", self.actions_adjustingstatus)
         # print("self.workingstatus before initializing Microgrid class: ", self.workingstatus)
@@ -126,26 +129,35 @@ class Env(object):
                   t=t
                   )
 
+        self.system = ManufacturingSystem(self.machine_states, self.machine_control_actions, self.buffer_states, grid)
+        action_sim = ActionSimulation(self.system)
+
+        solar_energy = grid.energy_generated_solar()
+        wind_energy = grid.energy_generated_wind()
+        generator_energy = grid.energy_generated_generator()
+        self.actions_solar = [solar_energy * theta[0], solar_energy * theta[1],
+                              solar_energy * (theta[2])]
+        self.actions_wind = [wind_energy * theta[3], wind_energy * theta[4],
+                             wind_energy * (theta[5])]
+        self.actions_generator = [generator_energy * theta[6], generator_energy * theta[7],
+                                  generator_energy * (theta[8])]
+        print("self.working_status before transitioning in env:", self.working_status)
+        print("self.SOC before transitioning in env:", self.SOC)
+        print("self.actions_adjustingstatus from flat actions:", self.actions_adjustingstatus)
         self.working_status, self.SOC = grid.transition(t)
         self.actions_adjustingstatus = [flat_actions[-12]] + [flat_actions[-8]] + [flat_actions[-4]]
-        solar_energy= grid.energy_generated_solar()
-        wind_energy= grid.energy_generated_wind()
-        generator_energy= grid.energy_generated_generator()
-        self.actions_solar = [solar_energy * theta[0], solar_energy * theta[1],
-                         solar_energy * (theta[2])]
-        self.actions_wind = [wind_energy * theta[3], wind_energy * theta[4],
-                        wind_energy * (theta[5])]
-        self.actions_generator = [generator_energy * theta[6], generator_energy * theta[7],
-                             generator_energy * (theta[8])]
+
 
         # print("self.machine_states before initializing manufacturingSystem class: ", self.machine_states)
         # print("self.buffer_states before initializing manufacturingSystem class: ", self.buffer_states)
         # print("machine_control_actions before initializing manufacturingSystem class: ", machine_control_actions)
-        self.system= ManufacturingSystem(self.machine_states, machine_control_actions, self.buffer_states, grid)
+
         # print("self.machine_states before transition: ", self.machine_states)
         # print("Buffer states before transition: ", self.buffer_states )
         self.machine_states, self.buffer_states = self.system.transition_manufacturing()
-        print("machine_states after transitioning: ", self.machine_states, "buffer_states after transitioning: ", self.buffer_states)
+        print("self.machine_states after transitioning in get_obs(): ", self.machine_states)
+        print("self.buffer_states after transitioning in get_obs(): ", self.buffer_states)
+        # print("machine_states after transitioning: ", self.machine_states, "buffer_states after transitioning: ", self.buffer_states)
         # Define a dictionary to map machine states to observation values
         state_mapping = {'Off': 0, 'Opr': 1, 'Brk': 2, 'Sta': 3, 'Blo': 4}
 
@@ -161,9 +173,9 @@ class Env(object):
 
         # Append the buffer states to the observation
             observation.extend(self.buffer_states)
-        # print("observation_disc",observation)
+        print("observation_disc for each machine is: ",observation)
         # Actionsimulation.microgridActions_SolarWindGenerator
-        action_sim= ActionSimulation(self.system)
+
         # solar_power, wind_power, generator_power = action_sim.MicroGridActions_SolarWindGenerator(theta)
         self.actions_purchased, self.actions_discharged = action_sim.MicroGridActions_PurchasedDischarged(self.actions_solar, self.actions_wind, self.actions_generator)
         # print("self.actions_discharged: ", self.actions_discharged)
@@ -183,7 +195,7 @@ class Env(object):
         observation.extend([self.SOC] + self.actions_wind)
         observation.extend([self.SOC] + self.actions_generator)
 
-        # print("observation", observation)
+        print("observation for the continuous agents: ", observation)
         # Define the number of elements for the first five lists and subsequent lists
         number_machines = 5
         power_sources = 4 # power sources are actually 3, 4 is just for coding purpose below
@@ -200,8 +212,8 @@ class Env(object):
             obs_list.append(observation[i:i + number_machines - 1])
         # return machine_states, buffer_states, SOC, solar_power, wind_power, generator_power
         # print("obs_list: ", obs_list)
-        self.targetoutput += int(self.system.throughput())
-        print("self.targetoutput: ", self.targetoutput)
+        # self.targetoutput += int(self.system.throughput())
+        # print("self.targetoutput: ", self.targetoutput)
         return obs_list
     def get_reward(self, t):
         # print("rate_consumption_charge: ", rate_consumption_charge[self.t//8640], "self.t:", t)
